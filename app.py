@@ -69,7 +69,7 @@ div.stButton > button:hover {
 col_logo, col_title = st.columns([1, 6])
 
 with col_logo:
-    st.image("C:\\SistemaFutbolChileno\\Liga de primera.png", width=150)
+    st.image("Liga de primera.png", width=150)
 
 with col_title:
     st.title("⚽ Scouting System Intelligence Chile 2025")
@@ -271,3 +271,4 @@ if nombre:
 
 
             st.dataframe(tabla, use_container_width=True)
+
