@@ -272,3 +272,4 @@ if nombre:
 
             st.dataframe(tabla, use_container_width=True)
 
+
