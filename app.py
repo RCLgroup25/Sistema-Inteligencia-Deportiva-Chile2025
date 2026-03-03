@@ -86,7 +86,7 @@ def limpiar_texto(texto):
 
 @st.cache_data
 def cargar_datos():
-    df = pd.read_csv("C:\\SistemaFutbolChileno\\df_merge.csv")
+    df = pd.read_csv("df_merge.csv")
     df["player_name_clean"] = df["player_name"].apply(limpiar_texto)
     return df
 
@@ -268,5 +268,6 @@ if nombre:
 
             tabla["Valor"] = tabla["Valor"].apply(lambda x: f"€ {x:,.0f}")
             tabla["Similitud_%"] = tabla["Similitud_%"].round(1)
+
 
             st.dataframe(tabla, use_container_width=True)
