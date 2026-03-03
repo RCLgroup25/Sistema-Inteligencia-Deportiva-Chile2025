@@ -48,7 +48,6 @@ def cargar_datos():
 
 df = cargar_datos()
 
-# Definir métricas para el modelo
 no_metricas = [
     'player_name', 'team_name', 'competition_name', 'unique_tournament_name', 
     'player_short_name', 'player_slug', 'position', 'Valor', 'Edad',
@@ -75,7 +74,6 @@ def analizar_jugador(nombre_input):
     idx = coincidencias.index[0]
     jugador_foco = df_model.loc[idx]
 
-    # Filtro de pares comparables
     df_pares = df_model[
         (df_model["position"] == jugador_foco["position"]) &
         (df_model["Edad"].between(jugador_foco["Edad"] - 3, jugador_foco["Edad"] + 3)) &
@@ -88,13 +86,18 @@ def analizar_jugador(nombre_input):
     idx_relativo = indices.index(idx)
     posiciones_esc = [df_model.index.get_loc(i) for i in indices]
     
-    similitudes = cosine_similarity([scaled_features[df_model.index.get_loc(idx)]], scaled_features[posiciones_esc])[0]
-    df_pares["Similitud_%"] = similitudes * 100
+    # 1. Cálculo de similitud base (-1 a 1)
+    sim_raw = cosine_similarity([scaled_features[df_model.index.get_loc(idx)]], scaled_features[posiciones_esc])[0]
+    
+    # 2. TRANSFORMACIÓN: Escalar de [-1, 1] a [0, 100]
+    # Esto asegura que "opuesto" sea 0% y "idéntico" sea 100%
+    df_pares["Similitud_%"] = ((sim_raw + 1) / 2) * 100
 
     gemelos = df_pares.sort_values("Similitud_%", ascending=False).iloc[1:6].copy()
     gemelos_validos = gemelos[gemelos["Valor"] > 0]
 
     if not gemelos_validos.empty:
+        # Ahora los pesos siempre son positivos, lo que hace el Fair Value estable
         pesos = gemelos_validos["Similitud_%"] * gemelos_validos["minutes_played_total"]
         fair_value = np.average(gemelos_validos["Valor"], weights=pesos)
         diferencia = fair_value - jugador_foco["Valor"]
@@ -104,7 +107,7 @@ def analizar_jugador(nombre_input):
     return jugador_foco, fair_value, diferencia, gemelos, df_pares
 
 # ---------------------------------------------------
-# INTERFAZ DE USUARIO
+# INTERFAZ DE USUARIO (Mismo diseño)
 # ---------------------------------------------------
 col_logo, col_title = st.columns([1, 6])
 with col_logo: st.image("Liga de primera.png", width=150)
@@ -120,7 +123,6 @@ if nombre:
     if res:
         jugador, fv, diff, gemelos, df_pares = res
         
-        # --- METRICAS PRINCIPALES ---
         st.markdown(f"## 👤 {jugador['player_name']}")
         col1, col2, col3 = st.columns(3)
         col1.metric("🎂 Edad", f"{int(jugador['Edad'])} años")
@@ -128,7 +130,6 @@ if nombre:
         if fv:
             col3.metric("📈 Fair Value Estimado", f"€ {fv:,.0f}", delta=f"{diff:,.0f}")
 
-        # --- DIAGNÓSTICO ---
         st.markdown("### 📌 Diagnóstico de mercado")
         if jugador["Edad"] <= 24:
             st.info("🧒 **POTENCIAL DE EXPORTACIÓN:** Perfil joven con proyección internacional.")
@@ -139,7 +140,6 @@ if nombre:
         else:
             st.warning("🟡📊 **PRECIO JUSTO:** Acorde a sus pares estadísticos.")
 
-        # --- GRÁFICO DE DISPERSIÓN POR CUADRANTES ---
         st.divider()
         st.markdown("## 📍 Posicionamiento en el Mercado")
         
@@ -154,14 +154,12 @@ if nombre:
             template="plotly_white", height=600
         )
         
-        # Líneas de cuadrantes (Promedios)
         fig.add_hline(y=df_pares["Valor"].mean(), line_dash="dash", line_color="gray", annotation_text="Valor Medio")
         fig.add_vline(x=df_pares["Similitud_%"].mean(), line_dash="dash", line_color="gray", annotation_text="Similitud Media")
         
         fig.update_traces(textposition='top center')
         st.plotly_chart(fig, use_container_width=True)
 
-        # --- TABLA DE GEMELOS ---
         st.markdown("## 🤝 Gemelos estadísticos IA")
         tabla = gemelos[["player_name", "team_name", "Valor", "Similitud_%", "Edad"]].copy()
         tabla["Similitud_%"] = tabla["Similitud_%"].round(1)
